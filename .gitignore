@@ -1,0 +1,25 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+.env.*
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+*.tmp
+
+# dbt
+target/
+dbt_packages/
+
+# OS files
+.DS_Store
+Thumbs.db
