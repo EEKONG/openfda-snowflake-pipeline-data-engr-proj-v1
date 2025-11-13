@@ -1,0 +1,10 @@
+sources:
+
+  - name: masterlanding
+    database: OPENFDA
+    schema: RAW_LANDING
+
+    tables:
+      - name: master_view
+        description: primary table for drug_shortages_master_view
+        identifier: drug_shortages_master_view
