@@ -7,8 +7,6 @@ SELECT
           REGEXP_REPLACE(
             REGEXP_REPLACE(
               INITCAP(TRIM(GENERIC_NAME)),
-
-              -- Removing dosage-form terms
               '\\b(' ||
                 'Injection|Injectable|Tablet|Capsule|Cream|Lotion|Gel|Patch|Powder|' ||
                 'Drops|Solution|Suspension|Syrup|Irrigation|Ointment|Topical|' ||
@@ -19,19 +17,16 @@ SELECT
               1, 0, 'i'
             ),
 
-            -- Removing trailing commas or semicolons
             '[,;]+\\s*$',
             '',
             1, 0, 'i'
           ),
 
-          -- Normalizing internal semicolon spacing
           '\\s*;\\s*',
           '; ',
           1, 0, 'i'
         ),
 
-        -- Collapsing double spaces
         '\\s{2,}',
         ' '
       )
@@ -76,13 +71,16 @@ SELECT
     )
 ) AS dosage_form,
     CASE
-        WHEN dosage_form ILIKE '%tablet chewable%' THEN 'Chewable Tablet'
-        WHEN dosage_form ILIKE '%chewable tablet%' THEN 'Chewable Tablet'
+        WHEN dosage_form IS NULL THEN 'Unknown'
 
-        WHEN dosage_form ILIKE '%tablet extended release%' THEN 'Extended Release Tablet'
-        WHEN dosage_form ILIKE '%film extended release%' THEN 'Extended Release Film'
+        WHEN dosage_form ILIKE '%tablet% chewable%' THEN 'Chewable Tablet'
+        WHEN dosage_form ILIKE '%chewable% tablet%' THEN 'Chewable Tablet'
+        WHEN dosage_form ILIKE '%tablet% extended release%' THEN 'Extended Release Tablet'
+        WHEN dosage_form ILIKE '%film% extended release%' THEN 'Extended Release Film'
+        WHEN dosage_form ILIKE '%tablet%' THEN 'Tablet'
 
-        WHEN dosage_form ILIKE '%capsule extended release%' THEN 'Extended Release Capsule'
+        WHEN dosage_form ILIKE '%capsule% extended release%' THEN 'Extended Release Capsule'
+        WHEN dosage_form ILIKE '%capsule%' THEN 'Capsule'
 
         WHEN dosage_form ILIKE '%injectable suspension%' THEN 'Injection'
         WHEN dosage_form ILIKE '%injection%' THEN 'Injection'
@@ -124,13 +122,101 @@ SELECT
         WHEN dosage_form ILIKE '%irrigant%' THEN 'Irrigation'
 
         ELSE dosage_form
-      END AS dosage_form_standardized,
+    END AS dosage_form_standardized,
     presentation,
     TRIM(company_name) as manufacturer_name,
-    shortage_reason,
+
+    CASE
+      WHEN LOWER(shortage_reason) LIKE '%active ingredient%' THEN 'API Shortage'
+
+      WHEN LOWER(shortage_reason) LIKE '%gmp%' 
+         OR LOWER(shortage_reason) LIKE '%good manufacturing%'
+         OR LOWER(shortage_reason) LIKE '%regulatory%'
+      THEN 'Manufacturing Issue'
+
+      WHEN LOWER(shortage_reason) LIKE '%demand%' THEN 'Demand Surge'
+
+      WHEN LOWER(shortage_reason) LIKE '%shipping%'
+         OR LOWER(shortage_reason) LIKE '%supply%'
+      THEN 'Supply Chain Issue'
+
+      WHEN LOWER(shortage_reason) LIKE '%discontinuation%' THEN 'Product Discontinued'
+
+      WHEN shortage_reason IS NULL
+         OR shortage_reason = ''
+         OR LOWER(shortage_reason) = 'unknown'
+         OR LOWER(shortage_reason) = 'null'
+      THEN
+        CASE
+            -- Status-driven enrichment
+            WHEN status = 'To Be Discontinued' THEN 'Product Discontinued'
+            WHEN status = 'Resolved' THEN 'Resolved Without Cause'
+            WHEN status = 'Current' THEN 'Under Investigation'
+
+            -- Supply Chain Indicators
+            WHEN LOWER(availability) LIKE '%limited%'
+              OR LOWER(availability) LIKE '%replenishment%'
+              OR LOWER(related_info) LIKE '%allocation%'
+              OR LOWER(update_type) LIKE '%allocation%'
+            THEN 'Supply Chain Issue'
+
+            -- Manufacturing Indicators
+            WHEN LOWER(related_info) LIKE '%manufactur%'
+              OR LOWER(related_info) LIKE '%quality%'
+              OR LOWER(related_info) LIKE '%gmp%'
+              OR LOWER(update_type) LIKE '%manufactur%'
+            THEN 'Manufacturing Issue'
+
+            -- API Shortage Indicators
+            WHEN LOWER(related_info) LIKE '%api%'
+              OR LOWER(related_info) LIKE '%active ingredient%'
+            THEN 'API Shortage'
+
+            -- Demand Surge Indicators
+            WHEN LOWER(related_info) LIKE '%demand%'
+              OR LOWER(update_type) LIKE '%demand%'
+            THEN 'Demand Surge'
+
+            -- Nothing matched → still unknown
+            ELSE 'Unattributed Shortage'
+        END
+      ELSE 'Unattributed Shortage'
+  END AS shortage_reason_standardized,
     INITCAP(TRIM(status)) AS status,
     openfda_application_number,
-    TRIM(openfda_brand_name) as brand_name,
+    INITCAP(
+          CASE
+            WHEN openfda_brand_name IS NULL OR TRIM(openfda_brand_name) = '' THEN 'Unknown'
+            WHEN LOWER(openfda_brand_name) IN ('na', 'n/a', 'none') THEN 'Unknown'
+            ELSE TRIM(
+              REGEXP_REPLACE(
+                  REGEXP_REPLACE(
+                      REGEXP_REPLACE(
+                          openfda_brand_name,
+                          '\\[|\\]', '',
+                          1, 0, 'e'
+                      ),
+                      '''', '',
+                      1, 0, 'e'
+                  ),
+                  '\\s*,\\s*', ', ',
+                  1, 0, 'e'
+                )
+              )
+          END) AS brand_name,
+    CASE
+        WHEN LOWER(brand_name) IN (
+            'sterile water',
+            'sodium chloride',
+            'dextrose',
+            'lactated ringers',
+            'bacteriostatic water',
+            'powder for solution',
+            'solution'
+        ) THEN 'Unbranded'
+        WHEN brand_name = 'Unknown' THEN 'Unknown'
+        ELSE brand_name
+    END AS brand_name_standardized,
     openfda_generic_name,
     openfda_manufacturer_name,
     openfda_product_ndc,

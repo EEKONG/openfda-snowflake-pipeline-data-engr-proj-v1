@@ -32,6 +32,12 @@ clean-targets:         # directories to be removed by `dbt clean`
 models:
   openfda_dbt_project:
     # Config indicated by + and applies to all files under models/example/
+    marts:
+      +materialized: table
+
+      root_cause_analysis:
+        +schema: MARTS_LAYER
+
     staging:
       +materialized: view
       
