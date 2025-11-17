@@ -37,6 +37,12 @@ models:
 
       root_cause_analysis:
         +schema: MARTS_LAYER
+      
+      shortages_per_therapeutic_category:
+        +schema: MARTS_LAYER
+      
+      shortage_duration:
+        +schema: MARTS_LAYER
 
     staging:
       +materialized: view
