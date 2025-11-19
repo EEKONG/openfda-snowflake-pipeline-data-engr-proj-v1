@@ -3,9 +3,9 @@ openfda_dbt_project:
   outputs:
     dev:
       type: snowflake
-      account: "HOSWGMG-MW83319"
-      user: "DATAENTERPRISE"
-      password: "M3yaknoekong1!"
+      account: "*******"
+      user: "********"
+      password: "********"
       role: "ACCOUNTADMIN"
       warehouse: "COMPUTE_WH"
       database: "OPENFDA"
