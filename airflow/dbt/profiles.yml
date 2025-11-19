@@ -1,0 +1,14 @@
+openfda_dbt_project:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: "HOSWGMG-MW83319"
+      user: "DATAENTERPRISE"
+      password: "M3yaknoekong1!"
+      role: "ACCOUNTADMIN"
+      warehouse: "COMPUTE_WH"
+      database: "OPENFDA"
+      schema: "OPENFDA_STAGING"
+      threads: 4
+      client_session_keep_alive: false
