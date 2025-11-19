@@ -23,3 +23,8 @@ dbt_packages/
 # OS files
 .DS_Store
 Thumbs.db
+
+profiles.yml
+**/profiles.yml
+.airflow/.dbt/
+.dbt/
