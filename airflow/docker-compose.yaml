@@ -1,0 +1,92 @@
+---
+version: "3.8"
+
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+  volumes:
+    - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
+    - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
+    - ../panda_jobs:/opt/airflow/panda_jobs
+    - "C:/Users/User/Documents/openfda_etl_pipeline_proj/dbt_project/openfda_dbt_project:/opt/airflow/openfda_dbt_project"
+    - ./dbt/profiles.yml:/home/airflow/.dbt/profiles.yml
+
+  user: "${AIRFLOW_UID:-50000}:0"
+
+services:
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    image: airflow-dbt-init:latest
+    entrypoint: /bin/bash
+    env_file:
+      - ../.env
+    command: >
+      -c "airflow db upgrade &&
+          airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com ||
+          true"
+    depends_on:
+      - postgres
+    restart: "no"
+
+  airflow-webserver:
+    <<: *airflow-common
+    image: airflow-dbt-web:latest
+    command: webserver
+    env_file:
+      - ../.env
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - airflow-init
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  airflow-scheduler:
+    <<: *airflow-common
+    image: airflow-dbt-scheduler:latest
+    command: scheduler
+    env_file:
+      - ../.env
+    depends_on:
+      - postgres
+      - airflow-init
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  postgres-db-volume:
