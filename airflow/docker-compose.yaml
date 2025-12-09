@@ -19,7 +19,7 @@ x-airflow-common: &airflow-common
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
     - ../panda_jobs:/opt/airflow/panda_jobs
     - "C:/Users/User/Documents/openfda_etl_pipeline_proj/dbt_project/openfda_dbt_project:/opt/airflow/openfda_dbt_project"
-    - ./dbt/profiles.yml:/home/airflow/.dbt/profiles.yml
+    - "C:/Users/User/.dbt:/home/airflow/.dbt"
 
   user: "${AIRFLOW_UID:-50000}:0"
 
