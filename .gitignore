@@ -19,12 +19,15 @@ __pycache__/
 # dbt
 target/
 dbt_packages/
+.airflow/.dbt/
+.dbt/
 
 # OS files
 .DS_Store
 Thumbs.db
 
-profiles.yml
-**/profiles.yml
-.airflow/.dbt/
-.dbt/
+
+
+
+# data outputs
+*.csv
