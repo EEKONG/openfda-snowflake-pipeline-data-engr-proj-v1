@@ -6,5 +6,5 @@ sources:
 
     tables:
       - name: master_view
-        description: primary table for drug_shortages_master_view
-        identifier: drug_shortages_master_view
+        description: primary table for drugs raw file
+        identifier: DRUG_SHORTAGES_RAW_LATEST

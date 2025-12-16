@@ -46,21 +46,27 @@ SELECT
     ) AS availability_status,
     related_info,
     TRY_TO_DATE(update_date) as update_date,
-        NULLIF(
-      TRIM(
-        REGEXP_REPLACE(
-          REGEXP_REPLACE(
+    NULLIF(
+      ARRAY_TO_STRING(
+        ARRAY_DISTINCT(
+          SPLIT(
             REGEXP_REPLACE(
-              INITCAP(TRIM(therapeutic_category)),
-              '\\[|\\]', '', 1, 0, 'e'
+              REGEXP_REPLACE(
+                REGEXP_REPLACE(
+                  INITCAP(TRIM(therapeutic_category)),
+                  '\\[|\\]', '', 1, 0, 'e'
             ),
             '''', '', 1, 0, 'e'
           ),
-          '\\s*,\\s*', ', ', 1, 0, 'e'
-        )
-      ),
-      ''
-    ) AS therapeutic_category,
+          '\\s*[;,]\\s*', ', ', 1, 0, 'e'   -- treats ; and , the same
+        ),
+        ', '
+      )
+    ),
+    ', '
+  ),
+  ''
+) AS therapeutic_category,
     TRIM(
     REGEXP_REPLACE(
         REGEXP_REPLACE(
@@ -110,6 +116,7 @@ SELECT
 
         WHEN dosage_form ILIKE '%gel metered%' THEN 'Gel'
         WHEN dosage_form ILIKE '%gel%' THEN 'Gel'
+        WHEN dosage_form ILIKE '%Gel%' THEN 'Gel'
 
         WHEN dosage_form ILIKE '%cream%' THEN 'Cream'
         WHEN dosage_form ILIKE '%lotion%' THEN 'Lotion'
