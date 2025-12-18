@@ -86,6 +86,22 @@ Data Analytics
 - Duration and lifecycle analysis
 - Business storytelling with Tableau dashboards
 
+Project Structure
+airflow/
+ ├─ dags/openfda_dag.py
+ ├─ Dockerfile
+ └─ docker-compose.yaml
+
+panda_jobs/
+ └─ Ingest_push_data.py
+
+dbt_project/
+ └─ openfda_dbt_project/
+    └─ models/
+       ├─ staging/
+       └─ marts/
+
+
 
 
 
