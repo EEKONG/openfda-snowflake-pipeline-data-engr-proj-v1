@@ -72,12 +72,6 @@ Separating raw, staging, and mart layers ensures transparency, testability, and 
     - WHICH cases require disproportionate operational effort
   The dashboard is designed for decision-makers, not just analysts.
 
-# Key Business Insights
-    - A small number of poorly defined root causes account for a disproportionate share of shortage records.
-    - Certain root causes generate high operational workload, requiring frequent updates and administrative follow-ups per drug.
-    - Drug shortages are concentrated in clinically critical therapeutic areas such as cardiovascular, endocrine, and neurological treatments.
-    - Timeline analysis reveals that several drugs remain in active shortage for multiple years, indicating chronic supply-chain failures rather than temporary disruptions.
-
 # Tech Stack & Skills Demonstrated
 Data Engineering
 - Python (API ingestion, JSON flattening)
@@ -91,6 +85,7 @@ Data Analytics
 - Root-cause classification and ranking
 - Duration and lifecycle analysis
 - Business storytelling with Tableau dashboards
+
 
 
 
