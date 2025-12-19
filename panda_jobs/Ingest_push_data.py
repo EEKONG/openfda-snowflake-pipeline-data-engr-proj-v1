@@ -1,4 +1,3 @@
-
 import os
 import time
 import requests
@@ -59,16 +58,16 @@ df = df.fillna("")
 
 print(f"Flattened DataFrame shape: {df.shape}")
 
-# Generate timestamped file + Table Name
-timestamp = datetime.now().strftime("%Y_%m_%d")
-csv_path = f"drug_shortages_{timestamp}.csv"
-table_name = f"DRUG_SHORTAGES_RAW_{timestamp}"
-master_view = "DRUG_SHORTAGES_MASTER_VIEW"
+# -----------------------------
+# LATEST-ONLY SETTINGS
+# -----------------------------
+csv_path = "drug_shortages_latest.csv"
+table_name = "DRUG_SHORTAGES_RAW_LATEST"
 
 df.to_csv(csv_path, index=False)
 print(f"Saved CSV locally as {csv_path}")
 
-# 5 Connect to snowflake
+# Connect to Snowflake
 print("Connecting to Snowflake...")
 
 conn = snowflake.connector.connect(
@@ -81,8 +80,8 @@ conn = snowflake.connector.connect(
 )
 cur = conn.cursor()
 
-# Create table and match to CSV schema
-print(f"Creating target table {table_name} with dynamic schema...")
+# Create/replace table (this effectively drops the previous version)
+print(f"Creating/Replacing target table {table_name} with dynamic schema...")
 
 columns_sql = ",\n    ".join([f'"{col}" STRING' for col in df.columns])
 create_table_sql = f"""
@@ -91,13 +90,16 @@ CREATE OR REPLACE TABLE {table_name} (
 );
 """
 cur.execute(create_table_sql)
-print(f"Table {table_name} created successfully.")
+print(f"Table {table_name} created/replaced successfully.")
 
-#Upload CSV to snowflake
-print("Uploading CSV to Snowflake stage...")
+# Upload CSV to Snowflake stage + load
+print("Uploading CSV to Snowflake internal stage...")
 
 try:
-    cur.execute(f"PUT file://{csv_path} @%{table_name} AUTO_COMPRESS=TRUE;")
+    # (Optional but recommended) clear the table stage so only latest file exists there
+    cur.execute(f"REMOVE @%{table_name};")
+
+    cur.execute(f"PUT file://{csv_path} @%{table_name} AUTO_COMPRESS=TRUE OVERWRITE=TRUE;")
     print("File uploaded to Snowflake internal stage.")
 
     print("Copying data into table...")
@@ -115,26 +117,9 @@ try:
 except Exception as e:
     print("Error during COPY INTO:", e)
 
-# Build and refresh master view
-print("Refreshing Master View...")
-
-# Get all versioned tables in schema
-cur.execute("""
-    SHOW TABLES LIKE 'DRUG_SHORTAGES_RAW_%';
-""")
-tables = [row[1] for row in cur.fetchall() if row[1].startswith("DRUG_SHORTAGES_RAW_")]
-
-if tables:
-    union_sql = "\nUNION ALL\n".join([f"SELECT * FROM {t}" for t in tables])
-    view_sql = f"CREATE OR REPLACE VIEW {master_view} AS\n{union_sql};"
-    cur.execute(view_sql)
-    print(f"Master view {master_view} refreshed with {len(tables)} tables.")
-else:
-    print("No versioned tables found to build master view.")
-
 # Close connection
 cur.close()
 conn.close()
 
-print(f"Pipeline completed successfully! Table created: {table_name}")
-print(f"Master view available: {master_view}")
+print("Pipeline completed successfully!")
+print(f"Latest table available: {table_name}")

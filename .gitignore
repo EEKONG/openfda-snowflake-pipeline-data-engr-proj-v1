@@ -26,8 +26,5 @@ dbt_packages/
 .DS_Store
 Thumbs.db
 
-
-
-
 # data outputs
 *.csv
