@@ -49,8 +49,9 @@ def run_dbt():
 default_args = {
     "owner": "eddie",
     "depends_on_past": False,
+    "email": ["eddieanddata@gmail.com"],
+    "email_on_failure": True,
     "email_on_retry": False,
-    "email_on_failure": False,
     "retries": 2,
     "retry_delay": timedelta(minutes=5),
 }
